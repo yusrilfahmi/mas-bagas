@@ -5,9 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Generator Laporan Perawatan</title>
     
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     
     <link rel="stylesheet" href="style.css">
 </head>
@@ -15,7 +13,7 @@
 
     <div class="app-container">
         <div class="preview-section">
-            <div class="document-preview" id="document-to-pdf">
+            <div class="document-preview">
                 <div class="doc-title" id="preview-judul">PERAWATAN KENDARAAN OPERASIONAL PERSAMPAHAN</div>
                 <div class="doc-subtitle" id="preview-waktu">BULAN JANUARI 2026</div>
                 <div class="doc-image-container">
@@ -31,19 +29,24 @@
             </div>
 
             <div class="form-group">
+                <label for="input-font-size">Ukuran Font Judul</label>
+                <input type="number" id="input-font-size" class="form-control" value="18" min="10" max="40">
+            </div>
+
+            <div class="form-group">
                 <label for="input-waktu">Waktu (Update)</label>
                 <input type="text" id="input-waktu" class="form-control" placeholder="Contoh: BULAN JANUARI 2026" value="BULAN JANUARI 2026">
             </div>
 
             <div class="form-group">
-                <label>Upload Gambar</label>
+                <label>Upload Gambar Laporan</label>
                 <label class="upload-area" for="input-gambar">
-                    <span id="upload-text">Klik untuk memilih gambar</span>
+                    <span id="upload-text">Klik di sini untuk memilih foto</span>
                     <input type="file" id="input-gambar" accept="image/*">
                 </label>
             </div>
 
-            <button class="btn-download" id="btn-download">Download PDF</button>
+            <button class="btn-download" id="btn-download">Export ke PDF</button>
         </div>
     </div>
 
