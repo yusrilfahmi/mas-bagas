@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // DOM Elements
     const inputJudul = document.getElementById('input-judul');
     const inputWaktu = document.getElementById('input-waktu');
+    const inputFontSize = document.getElementById('input-font-size');
     const inputGambar = document.getElementById('input-gambar');
     
     const previewJudul = document.getElementById('preview-judul');
@@ -10,54 +10,112 @@ document.addEventListener('DOMContentLoaded', () => {
     const uploadText = document.getElementById('upload-text');
     const btnDownload = document.getElementById('btn-download');
 
-    // Update Preview secara Real-time saat mengetik
-    inputJudul.addEventListener('input', function() {
-        previewJudul.textContent = this.value || 'JUDUL DOKUMEN KOSONG';
-    });
+    let base64Image = null;
 
-    inputWaktu.addEventListener('input', function() {
-        previewWaktu.textContent = this.value || 'WAKTU KOSONG';
-    });
+    // Fungsi update UI
+    function updatePreviewUI() {
+        previewJudul.textContent = inputJudul.value || 'JUDUL DOKUMEN KOSONG';
+        previewWaktu.textContent = inputWaktu.value || 'WAKTU KOSONG';
+        
+        let fontSize = parseInt(inputFontSize.value) || 18;
+        // Update font size di layar web, proporsional
+        previewJudul.style.fontSize = fontSize + 'pt';
+        previewWaktu.style.fontSize = Math.max(10, fontSize - 4) + 'pt';
+    }
 
-    // Menangani Upload Gambar
+    // Pasang Event Listener
+    inputJudul.addEventListener('input', updatePreviewUI);
+    inputWaktu.addEventListener('input', updatePreviewUI);
+    inputFontSize.addEventListener('input', updatePreviewUI);
+
+    // Inisialisasi awal font size di UI
+    updatePreviewUI();
+
     inputGambar.addEventListener('change', function(event) {
         const file = event.target.files[0];
-        
         if (file) {
-            // Ubah teks upload
             uploadText.textContent = file.name;
-
-            // Gunakan FileReader untuk membaca file
             const reader = new FileReader();
             reader.onload = function(e) {
-                previewImage.src = e.target.result;
+                base64Image = e.target.result;
+                previewImage.src = base64Image;
                 previewImage.style.display = 'block';
             }
             reader.readAsDataURL(file);
         }
     });
 
-    // Fungsi Generate PDF
     btnDownload.addEventListener('click', function() {
-        // Targetkan elemen preview untuk diubah ke PDF (isinya akan sama persis)
-        const element = document.getElementById('document-to-pdf');
+        const { jsPDF } = window.jspdf;
         
-        // Ambil nilai dari input judul untuk dijadikan nama file
-        // Jika input kosong, gunakan nama default 'Dokumen_Tanpa_Judul'
-        let namaFile = inputJudul.value.trim();
-        if (namaFile === "") {
-            namaFile = "Dokumen_Tanpa_Judul";
-        }
-        
-        const opt = {
-            margin:       [15, 15, 15, 15],
-            filename:     namaFile + '.pdf', // Nama file sekarang dinamis sesuai judul
-            image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 2, useCORS: true },
-            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        };
+        const doc = new jsPDF({
+            orientation: 'portrait',
+            unit: 'cm',
+            format: 'a4'
+        });
 
-        // Proses generate dan download
-        html2pdf().set(opt).from(element).save();
+        const margin = 2.54;
+        const pageWidth = 21.0; 
+        const pageHeight = 29.7;
+        const contentWidth = pageWidth - (margin * 2);
+
+        let judul = inputJudul.value.trim().toUpperCase();
+        let waktu = inputWaktu.value.trim().toUpperCase();
+        let namaFile = judul ? judul : 'Dokumen_Laporan';
+        let fontSizeJudul = parseInt(inputFontSize.value) || 18;
+
+        // --- 1. SETTING JUDUL ---
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(fontSizeJudul);
+        
+        // Memecah teks jika terlalu panjang agar tidak nabrak margin
+        let splitTitle = doc.splitTextToSize(judul, contentWidth);
+        let startY = margin + 1; // Posisi Y awal
+        
+        // Cetak judul
+        doc.text(splitTitle, pageWidth / 2, startY, { align: 'center' });
+
+        // --- 2. KALKULASI JARAK UNTUK SUB-JUDUL ---
+        // Menghitung berapa cm ruang yang dihabiskan oleh judul
+        // 1 pt = ~0.03527 cm. Kita kalikan dengan line height agar dinamis
+        let titleHeightCm = (fontSizeJudul * 0.03527 * 1.15) * splitTitle.length;
+        
+        // Posisi Y baru untuk Waktu (ditambah sedikit jarak)
+        let subtitleY = startY + titleHeightCm + 0.3;
+
+        // --- 3. SETTING SUB-JUDUL (WAKTU) ---
+        let fontSizeWaktu = Math.max(10, fontSizeJudul - 4); // Ukuran lebih kecil dari judul
+        doc.setFontSize(fontSizeWaktu);
+        doc.text(waktu, pageWidth / 2, subtitleY, { align: 'center' });
+
+        // --- 4. SETTING GAMBAR ---
+        if (base64Image) {
+            const img = new Image();
+            img.src = base64Image;
+            
+            img.onload = function() {
+                const imgRatio = img.width / img.height;
+                
+                // Mulai letakkan gambar 1.5 cm di bawah sub-judul
+                const imageStartY = subtitleY + 1.5; 
+                
+                const maxImgWidth = contentWidth;
+                const maxImgHeight = pageHeight - imageStartY - margin; 
+
+                let finalWidth = maxImgWidth;
+                let finalHeight = finalWidth / imgRatio;
+
+                if (finalHeight > maxImgHeight) {
+                    finalHeight = maxImgHeight;
+                    finalWidth = finalHeight * imgRatio;
+                }
+
+                const xPos = (pageWidth - finalWidth) / 2;
+                doc.addImage(base64Image, xPos, imageStartY, finalWidth, finalHeight);
+                doc.save(namaFile + '.pdf');
+            };
+        } else {
+            doc.save(namaFile + '.pdf');
+        }
     });
 });
